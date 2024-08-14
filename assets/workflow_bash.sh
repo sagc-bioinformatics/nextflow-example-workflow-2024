@@ -64,7 +64,7 @@ done
 
 
 # combine QC data into a single multiQC report
-multiqc -c multiqc.config -n ${QCDir}/multiqc_report ${QCDir} ${OutDir}
+multiqc -c multiqc_config.yml -n ${QCDir}/multiqc_report ${QCDir} ${OutDir}
 
 
 
