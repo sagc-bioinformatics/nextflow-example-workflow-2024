@@ -1,5 +1,4 @@
 
-
 # Nextflow demonstration workflow
 
 
