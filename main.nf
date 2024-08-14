@@ -1,11 +1,5 @@
 params.outdir = 'output'
 params.genome = 'data/genome.fa'
-/*
-
-process MULTIQC {
-
-}
-*/
 
 process FASTP {
 
@@ -83,11 +77,27 @@ process SAMTOOLS_FLAGSTAT {
     tuple val(id), path(bam)
 
     output:
-    tuple val(id), path('*.flagstat.txt')
+    tuple val(id), path('*.flagstat.txt'), emit: flagstat
 
     """
     # post-mapping QC
     samtools flagstat ${bam} > ${id}.flagstat.txt
+    """
+}
+
+process MULTIQC {
+
+    publishDir { "${params.outdir}/QC" }
+
+    input:
+    path files
+    path config
+
+    output:
+    path '*.html'
+
+    """
+    multiqc -c ${config} -n multiqc_report.html ${files}
     """
 }
 
@@ -113,11 +123,22 @@ workflow {
     // CONNECT PROCESSES
     //
 
+
+    // This can happen independently
     FASTP ( ch_input )
     
-    MINIMAP2 ( ch_input, ch_genome ) | SAMTOOLS_VIEW | SAMTOOLS_FLAGSTAT
+    MINIMAP2 ( ch_input, ch_genome )
+        | SAMTOOLS_VIEW
+        | SAMTOOLS_FLAGSTAT
 
-    // TODO: finally, multiQC
-    // Should I demonstrate the use of topic channels?
+    // Finally, multiQC
+    // Showing that we can also access output channels by .out
+    // TODO: should I demonstrate the use of topic channels?
+    // probs get config as a param too
+    ch_multiqc = SAMTOOLS_FLAGSTAT.out.flagstat
+        | mix(FASTP.out.json)
+        | map { it[1] }
+        | collect
 
+    MULTIQC ( ch_multiqc, file ('assets/multiqc_config.yml') )
 }
