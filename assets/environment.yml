@@ -1,0 +1,10 @@
+name: workflowenv
+channels:
+  - bioconda
+  - conda-forge
+  - defaults
+dependencies:
+  - minimap2=2.28
+  - samtools=1.20
+  - fastp=0.23.4
+  - multiqc=1.23
