@@ -1,17 +1,6 @@
 params.outdir = 'output'
 params.genome = 'data/genome.fa'
 /*
-process MINIMAP2 {
-
-}
-
-process SAMTOOLS_VIEW {
-
-}
-
-process SAMTOOLS_FLAGSTAT {
-
-}
 
 process MULTIQC {
 
@@ -52,7 +41,7 @@ process FASTP {
 
 process MINIMAP2 {
 
-    publishDir { "${params.outdir}/aligned" }
+    // we won't have publishDir here, because we don't care about sam files
     cpus 2 // we can set this in config also, but it will mean the implicit variable task.cpus is set
 
     input:
@@ -60,7 +49,7 @@ process MINIMAP2 {
     path genome // a separate channel, not associated with a particular sample
 
     output:
-    tuple val(id), path('*.sam'), emit: aligned
+    tuple val(id), path('*.sam'), emit: sam
 
     // again we can just paste our script verbatim
     // Nextflow keeps info on what commands are run anyway, so we can skip that bit (show how to inspect)
@@ -68,6 +57,37 @@ process MINIMAP2 {
     # map reads
     echo "mapping reads"
     minimap2 -t ${task.cpus} -a -x sr ${genome} ${reads} > ${id}.sam 2> ${id}.minimap2.log
+    """
+}
+
+process SAMTOOLS_VIEW {
+    
+    publishDir { "${params.outdir}/aligned" }
+
+    input:
+    tuple val(id), path(sam)
+
+    output:
+    tuple val(id), path('*.bam'), emit: bam
+
+    """
+    # convert SAM to BAM
+    echo "convert SAM to BAM"
+    samtools view -bh -o ${id}.bam ${sam}
+    """
+}
+
+process SAMTOOLS_FLAGSTAT {
+
+    input:
+    tuple val(id), path(bam)
+
+    output:
+    tuple val(id), path('*.flagstat.txt')
+
+    """
+    # post-mapping QC
+    samtools flagstat ${bam} > ${id}.flagstat.txt
     """
 }
 
@@ -95,8 +115,9 @@ workflow {
 
     FASTP ( ch_input )
     
-    MINIMAP2 ( ch_input, ch_genome )
+    MINIMAP2 ( ch_input, ch_genome ) | SAMTOOLS_VIEW | SAMTOOLS_FLAGSTAT
 
-    // FASTP | MINIMAP2 | SAMTOOLS_VIEW | SAMTOOLS_FLAGSTAT | MULTIQC
+    // TODO: finally, multiQC
+    // Should I demonstrate the use of topic channels?
 
 }
