@@ -141,5 +141,5 @@ workflow {
         | map { it[1] }
         | collect
 
-    MULTIQC ( ch_multiqc, file ('assets/multiqc_config.yml') )
+    MULTIQC ( ch_multiqc, file ("${workflow.projectDir}/assets/multiqc_config.yml") )
 }
