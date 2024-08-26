@@ -1,5 +1,6 @@
 params.outdir = 'output'
 params.genome = 'data/genome.fa'
+params.samples = 'data/samples/*.fastq'
 
 process FASTP {
 
@@ -111,7 +112,7 @@ workflow {
     // simpleName is because it is a Path, and Groovy lets you convert get*() calls like they're attributes
     // map is an operator - you can use () to call it, but with one arg (a closure), we don't need to
     // Note that you don't need to pass an id around - it just makes it easier!
-    ch_input = channel.fromPath ( 'data/samples/*.fastq' )
+    ch_input = channel.fromPath ( params.samples )
         | map { [ it.simpleName, it ] }
 
     // you could use params.genome in a process without making a channel
