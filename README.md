@@ -1,9 +1,7 @@
 
 # Nextflow example workflow
 
-This repository contains a completed example of converting a simple [bash script](assets/workflow_bash.sh) into a nextflow workflow.
-
-The workshop was held in person on the 28th of August, 2024 ([workshop site here](https://sagc-bioinformatics.github.io/nextflow-vs-snakemake-2024/)).
+This repository contains a completed example of converting a simple [bash script](assets/workflow_bash.sh) into a nextflow workflow, made for the ([2024 Nextflow vs Snakemake workshop](https://sagc-bioinformatics.github.io/nextflow-vs-snakemake-2024/)).
 
 The version of the workflow that was written on the day can be found in [main.nf.WORKSHOP_VERSION](main.nf.WORKSHOP_VERSION).
 
