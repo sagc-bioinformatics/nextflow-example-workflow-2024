@@ -1,0 +1,115 @@
+params.samples = 'data/samples/*.fastq'
+params.outdir = 'output'
+params.genome = 'data/genome.fa'
+
+process FASTP {
+
+    publishDir "${params.outdir}/QC", pattern: "*.html" 
+
+    input:
+    tuple val(id), path(reads)
+
+    output:
+    path '*.json', emit: json
+    path '*.html', emit: html
+
+    """
+    fastp -i ${reads} \
+        --json ${id}.fastp.json \
+        --html ${id}.fastp.html
+    """
+}
+
+
+process MINIMAP2 {
+
+    cpus 2
+
+    input:
+    tuple val(id), path(reads)
+    path genome
+
+    output:
+    tuple val(id), path("*.sam")
+
+    """
+    minimap2 -t ${task.cpus} \
+        -a -x sr \
+        ${genome} ${reads} > ${id}.sam 2> ${id}.minimap2.log
+    """
+}
+
+
+process SAMTOOLS_VIEW {
+
+    publishDir "${params.outdir}/alignments"
+
+    input:
+    tuple val(id), path(sam)
+
+    output:
+    tuple val(id), path("*.bam")
+
+    """
+    samtools view -bh -o ${id}.bam ${sam}
+    """
+}
+
+
+process SAMTOOLS_FLAGSTAT {
+
+    input:
+    tuple val(id), path(bam)
+
+    output:
+    tuple val(id), path("*.txt")
+
+
+    """
+    samtools flagstat ${bam} > ${id}.flagstat.txt
+    """
+}
+
+process MULTIQC {
+
+    publishDir "${params.outdir}/QC"
+
+    input:
+    path files
+    path config
+
+    output:
+    path "*.html"
+
+    """
+    multiqc -c ${config} \
+        -n multiqc_report ${files}
+    """
+}
+
+workflow {
+
+    // Get our samples into a channel 
+    ch_samples = channel.fromPath( params.samples )
+        | map { [ it.simpleName, it ] }
+
+    // Invoke fastp and put output into a channel
+    ch_fastp = ch_samples | FASTP
+
+    ch_genome = channel.value( file(params.genome, checkIfExists: true) )
+
+    ch_flagstat = MINIMAP2( ch_samples, ch_genome ) 
+        | SAMTOOLS_VIEW
+        | SAMTOOLS_FLAGSTAT
+
+
+    ch_files = ch_flagstat 
+        | map { it[1] }
+        | mix( ch_fastp.json )
+        | collect
+
+
+    MULTIQC ( ch_files, file("${workflow.projectDir}/assets/multiqc_config.yml", checkIfExists: true) )
+
+
+}
